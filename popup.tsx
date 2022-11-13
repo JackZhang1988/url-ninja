@@ -1,4 +1,4 @@
-import AddIcon from "@mui/icons-material/Add"
+import AddBoxRoundedIcon from '@mui/icons-material/AddBoxRounded';
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Checkbox from "@mui/material/Checkbox"
@@ -34,7 +34,6 @@ interface IQueryItem {
 }
 
 function IndexPopup() {
-  const [data, setData] = useState("")
   const [queryItems, setQueryItems] = useState<IQueryItem[]>([{ key: "", value: "", checked: true }])
 
   const handleChange = (key: string, index: number, value: string | boolean) => {
@@ -105,10 +104,10 @@ function IndexPopup() {
         ))}
       </Box>
       <IconButton aria-label="add" color="primary" onClick={handlAddQuery}>
-        <AddIcon />
+        <AddBoxRoundedIcon />
       </IconButton>
       <Divider textAlign="left" sx={{ mt: "10px", mb: "10px" }}>
-        <span className="divider-text">Hashes:</span>
+        <span className="divider-text">Hash:</span>
       </Divider>
       <div className="hash-item">
         <Switch defaultChecked size="small" />
