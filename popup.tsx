@@ -8,9 +8,29 @@ import MenuItem from "@mui/material/MenuItem"
 import Switch from "@mui/material/Switch"
 import TextField from "@mui/material/TextField"
 import Grid from "@mui/material/Unstable_Grid2"
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 
 import "./index.less"
+
+interface IUrlInfo {
+  protocol: string;
+}
+
+function getUrlInfo(url) {
+  const urlInfo = new URL(url);
+  return {
+    ...urlInfo,
+    protocol: urlInfo.protocol.slice(0, -1)
+  }
+}
+
+async function getCurrentTab() {
+  let queryOptions = { active: true, lastFocusedWindow: true };
+  // `tab` will either be a `tabs.Tab` instance or `undefined`.
+  let [tab] = await chrome.tabs.query(queryOptions);
+  // TODO: 127.0.0.1 won't return url in Edge browser
+  return tab;
+}
 
 interface IUrlItemProps {
   title: string
@@ -27,6 +47,7 @@ function UrlItem(props: React.PropsWithChildren<IUrlItemProps>) {
   )
 }
 
+
 interface IQueryItem {
   key: string
   value: string
@@ -35,6 +56,21 @@ interface IQueryItem {
 
 function IndexPopup() {
   const [queryItems, setQueryItems] = useState<IQueryItem[]>([{ key: "", value: "", checked: true }])
+
+  const [urlInfo, setUrlInfo] = useState<IUrlInfo>({
+    protocol: 'https',
+  });
+
+  useEffect(() => {
+    const init = async () => {
+      const tab = await getCurrentTab();
+      const urlInfo = getUrlInfo(tab.url);
+      console.log('url info', urlInfo);
+      setUrlInfo(urlInfo);
+    }
+
+    init().catch(console.error);
+  });
 
   const handleChange = (key: string, index: number, value: string | boolean) => {
     setQueryItems(
@@ -49,7 +85,7 @@ function IndexPopup() {
     )
   }
 
-  const handlAddQuery = () => {
+  const handleAddQuery = () => {
     setQueryItems([...queryItems, { key: "", value: "", checked: true }])
   }
 
@@ -57,7 +93,7 @@ function IndexPopup() {
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
       <Grid container spacing={0} alignItems="center" rowSpacing={1}>
         <UrlItem title="Protocal">
-          <TextField id="sroptocalSelect" variant="outlined" size="small" select value={"https"}>
+          <TextField id="protocalSelect" variant="outlined" size="small" select value={urlInfo.protocol}>
             <MenuItem key="https" value="https">
               https
             </MenuItem>
@@ -82,7 +118,7 @@ function IndexPopup() {
       {/* <Button sx={{ml: '5px'}} variant="outlined" size="small" endIcon={<AddIcon />}>New Params</Button> */}
       <Box sx={{ mb: "10px" }}>
         {queryItems.map((item: IQueryItem, index: number) => (
-          <div className="query-item">
+          <div className="query-item" key={index}>
             <Checkbox
               size="small"
               checked={item.checked}
@@ -103,7 +139,7 @@ function IndexPopup() {
           </div>
         ))}
       </Box>
-      <IconButton aria-label="add" color="primary" onClick={handlAddQuery}>
+      <IconButton aria-label="add" color="primary" onClick={handleAddQuery}>
         <AddBoxRoundedIcon />
       </IconButton>
       <Divider textAlign="left" sx={{ mt: "10px", mb: "10px" }}>
