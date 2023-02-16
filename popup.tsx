@@ -12,15 +12,23 @@ import React, { useEffect, useState } from "react"
 
 import "./index.less"
 
-interface IUrlInfo {
+interface IUrlInfo extends Partial<URL> {
   protocol: string;
 }
 
 function getUrlInfo(url) {
   const urlInfo = new URL(url);
+  console.log('url info', urlInfo);
+
   return {
-    ...urlInfo,
-    protocol: urlInfo.protocol.slice(0, -1)
+    hash: urlInfo.hash,
+    protocol: urlInfo.protocol.slice(0, -1),
+    host: urlInfo.host,
+    href: urlInfo.href,
+    hostname: urlInfo.hostname,
+    search: urlInfo.search,
+    searchParams: urlInfo.searchParams,
+    pathname: urlInfo.pathname,
   }
 }
 
@@ -65,8 +73,18 @@ function IndexPopup() {
     const init = async () => {
       const tab = await getCurrentTab();
       const urlInfo = getUrlInfo(tab.url);
-      console.log('url info', urlInfo);
       setUrlInfo(urlInfo);
+      const queryItems = [] as IQueryItem[];
+      urlInfo.searchParams.forEach((value, key) => {
+        queryItems.push({
+          key,
+          value,
+          checked: true
+        })
+      })
+      if(queryItems.length) {
+        setQueryItems(queryItems)
+      }
     }
 
     init().catch(console.error);
@@ -103,13 +121,13 @@ function IndexPopup() {
           </TextField>
         </UrlItem>
         <UrlItem title="Hostname">
-          <TextField variant="outlined" fullWidth size="small"></TextField>
+          <TextField variant="outlined" fullWidth size="small" value={urlInfo.hostname}></TextField>
         </UrlItem>
         <UrlItem title="Port">
-          <TextField variant="outlined" fullWidth size="small" type="number"></TextField>
+          <TextField variant="outlined" fullWidth size="small" type="number" value={urlInfo.port}></TextField>
         </UrlItem>
         <UrlItem title="Path">
-          <TextField variant="outlined" fullWidth size="small"></TextField>
+          <TextField variant="outlined" fullWidth size="small" value={urlInfo.pathname}></TextField>
         </UrlItem>
       </Grid>
       <Divider textAlign="left" sx={{ mt: "10px", mb: "10px" }}>
@@ -148,7 +166,7 @@ function IndexPopup() {
       <div className="hash-item">
         <Switch defaultChecked size="small" />
         <span className="item-label">=</span>
-        <TextField className="value-input" size="small" multiline></TextField>
+        <TextField className="value-input" size="small" multiline value={decodeURIComponent(urlInfo.hash)}></TextField>
       </div>
       <Box sx={{ mt: "10px" }}>
         <Button variant="contained" size="small">
