@@ -1,4 +1,4 @@
-import AddBoxRoundedIcon from '@mui/icons-material/AddBoxRounded';
+import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Checkbox from "@mui/material/Checkbox"
@@ -13,12 +13,12 @@ import React, { useEffect, useState } from "react"
 import "./index.less"
 
 interface IUrlInfo extends Partial<URL> {
-  protocol: string;
+  protocol: string
 }
 
 function getUrlInfo(url) {
-  const urlInfo = new URL(url);
-  console.log('url info', urlInfo);
+  const urlInfo = new URL(url)
+  console.log("url info", urlInfo)
 
   return {
     hash: urlInfo.hash,
@@ -28,16 +28,16 @@ function getUrlInfo(url) {
     hostname: urlInfo.hostname,
     search: urlInfo.search,
     searchParams: urlInfo.searchParams,
-    pathname: urlInfo.pathname,
+    pathname: urlInfo.pathname
   }
 }
 
 async function getCurrentTab() {
-  let queryOptions = { active: true, lastFocusedWindow: true };
+  let queryOptions = { active: true, lastFocusedWindow: true }
   // `tab` will either be a `tabs.Tab` instance or `undefined`.
-  let [tab] = await chrome.tabs.query(queryOptions);
+  let [tab] = await chrome.tabs.query(queryOptions)
   // TODO: 127.0.0.1 won't return url in Edge browser
-  return tab;
+  return tab
 }
 
 interface IUrlItemProps {
@@ -55,7 +55,6 @@ function UrlItem(props: React.PropsWithChildren<IUrlItemProps>) {
   )
 }
 
-
 interface IQueryItem {
   key: string
   value: string
@@ -66,15 +65,15 @@ function IndexPopup() {
   const [queryItems, setQueryItems] = useState<IQueryItem[]>([{ key: "", value: "", checked: true }])
 
   const [urlInfo, setUrlInfo] = useState<IUrlInfo>({
-    protocol: 'https',
-  });
+    protocol: "https"
+  })
 
   useEffect(() => {
     const init = async () => {
-      const tab = await getCurrentTab();
-      const urlInfo = getUrlInfo(tab.url);
-      setUrlInfo(urlInfo);
-      const queryItems = [] as IQueryItem[];
+      const tab = await getCurrentTab()
+      const urlInfo = getUrlInfo(tab.url)
+      setUrlInfo(urlInfo)
+      const queryItems = [] as IQueryItem[]
       urlInfo.searchParams.forEach((value, key) => {
         queryItems.push({
           key,
@@ -82,13 +81,13 @@ function IndexPopup() {
           checked: true
         })
       })
-      if(queryItems.length) {
+      if (queryItems.length) {
         setQueryItems(queryItems)
       }
     }
 
-    init().catch(console.error);
-  });
+    init().catch(console.error)
+  }, [])
 
   const handleChange = (key: string, index: number, value: string | boolean) => {
     setQueryItems(
@@ -107,11 +106,38 @@ function IndexPopup() {
     setQueryItems([...queryItems, { key: "", value: "", checked: true }])
   }
 
+  const handleUrlInfoChange = (type, value) => {
+    setUrlInfo({
+      ...urlInfo,
+      [type]: value
+    })
+  }
+
+  const buildNewUrl = () => {
+    let url = `${urlInfo.protocol}://${urlInfo.hostname}${urlInfo.port ? `:${urlInfo.port}`: ''}${urlInfo.pathname}`;
+    const query = queryItems.filter(q => q.checked).reduce((pre: string, cur) => {
+      return `${pre ? pre+'&' : pre}` + `${cur.key}=${cur.value}`;
+    }, '')
+
+    return url + `${query ? '?' + query : ''}` + `${urlInfo.hash ? '#' + urlInfo.hash : ''}`;
+  }
+
+  const openUrl = () => {
+    const url = buildNewUrl();
+    chrome.tabs.create({url, selected: true, active: true});
+  }
+
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
       <Grid container spacing={0} alignItems="center" rowSpacing={1}>
         <UrlItem title="Protocal">
-          <TextField id="protocalSelect" variant="outlined" size="small" select value={urlInfo.protocol}>
+          <TextField
+            id="protocalSelect"
+            variant="outlined"
+            size="small"
+            select
+            value={urlInfo.protocol}
+            onChange={(e) => handleUrlInfoChange("protocol", e.target.value)}>
             <MenuItem key="https" value="https">
               https
             </MenuItem>
@@ -121,13 +147,29 @@ function IndexPopup() {
           </TextField>
         </UrlItem>
         <UrlItem title="Hostname">
-          <TextField variant="outlined" fullWidth size="small" value={urlInfo.hostname}></TextField>
+          <TextField
+            variant="outlined"
+            fullWidth
+            size="small"
+            value={urlInfo.hostname}
+            onChange={(e) => handleUrlInfoChange("hostname", e.target.value)}></TextField>
         </UrlItem>
         <UrlItem title="Port">
-          <TextField variant="outlined" fullWidth size="small" type="number" value={urlInfo.port}></TextField>
+          <TextField
+            variant="outlined"
+            fullWidth
+            size="small"
+            type="number"
+            value={urlInfo.port}
+            onChange={(e) => handleUrlInfoChange("port", e.target.value)}></TextField>
         </UrlItem>
         <UrlItem title="Path">
-          <TextField variant="outlined" fullWidth size="small" value={urlInfo.pathname}></TextField>
+          <TextField
+            variant="outlined"
+            fullWidth
+            size="small"
+            value={urlInfo.pathname}
+            onChange={(e) => handleUrlInfoChange("pathname", e.target.value)}></TextField>
         </UrlItem>
       </Grid>
       <Divider textAlign="left" sx={{ mt: "10px", mb: "10px" }}>
@@ -166,11 +208,19 @@ function IndexPopup() {
       <div className="hash-item">
         <Switch defaultChecked size="small" />
         <span className="item-label">=</span>
-        <TextField className="value-input" size="small" multiline value={decodeURIComponent(urlInfo.hash)}></TextField>
+        <TextField
+          className="value-input"
+          size="small"
+          multiline
+          value={decodeURIComponent(urlInfo.hash)}
+          onChange={(e) => handleUrlInfoChange("hash", e.target.value)}></TextField>
       </div>
       <Box sx={{ mt: "10px" }}>
-        <Button variant="contained" size="small">
+        <Button variant="contained" size="small" onClick={openUrl}>
           Open
+        </Button>
+        <Button variant="outlined" size="small" style={{marginLeft: '5px'}}>
+          Copy Url
         </Button>
       </Box>
     </Box>
