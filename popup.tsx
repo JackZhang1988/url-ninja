@@ -12,6 +12,17 @@ import React, { useEffect, useState } from "react"
 
 import "./index.less"
 
+function copy(text) {
+  const ta = document.createElement('textarea');
+  ta.style.cssText = 'opacity:0; position:fixed; width:1px; height:1px; top:0; left:0;';
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+}
+
 interface IUrlInfo extends Partial<URL> {
   protocol: string
 }
@@ -127,6 +138,11 @@ function IndexPopup() {
     chrome.tabs.create({url, selected: true, active: true});
   }
 
+  const copyUrl = () => {
+    const url = buildNewUrl();
+    copy(url);
+  }
+
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
       <Grid container spacing={0} alignItems="center" rowSpacing={1}>
@@ -219,7 +235,7 @@ function IndexPopup() {
         <Button variant="contained" size="small" onClick={openUrl}>
           Open
         </Button>
-        <Button variant="outlined" size="small" style={{marginLeft: '5px'}}>
+        <Button variant="outlined" size="small" style={{marginLeft: '5px'}} onClick={copyUrl}>
           Copy Url
         </Button>
       </Box>
