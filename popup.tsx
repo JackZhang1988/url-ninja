@@ -8,6 +8,7 @@ import MenuItem from "@mui/material/MenuItem"
 import Switch from "@mui/material/Switch"
 import TextField from "@mui/material/TextField"
 import Grid from "@mui/material/Unstable_Grid2"
+import Autocomplete from "@mui/material/Autocomplete"
 import React, { useEffect, useState } from "react"
 
 import "./index.less"
@@ -26,6 +27,8 @@ function copy(text) {
 interface IUrlInfo extends Partial<URL> {
   protocol: string
 }
+
+let curTabInfo = {} as chrome.tabs.Tab;
 
 function getUrlInfo(url) {
   const urlInfo = new URL(url)
@@ -46,9 +49,10 @@ function getUrlInfo(url) {
 async function getCurrentTab() {
   let queryOptions = { active: true, lastFocusedWindow: true }
   // `tab` will either be a `tabs.Tab` instance or `undefined`.
-  let [tab] = await chrome.tabs.query(queryOptions)
+  let allTab = await chrome.tabs.query(queryOptions)
   // TODO: 127.0.0.1 won't return url in Edge browser
-  return tab
+  curTabInfo = allTab[0];
+  return curTabInfo
 }
 
 interface IUrlItemProps {
@@ -78,6 +82,8 @@ function IndexPopup() {
   const [urlInfo, setUrlInfo] = useState<IUrlInfo>({
     protocol: "https"
   })
+
+  const [queryOpts, setQueryOpts] = useState<string[]>([]);
 
   useEffect(() => {
     const init = async () => {
@@ -143,6 +149,11 @@ function IndexPopup() {
     copy(url);
   }
 
+  const replaceCurUrl = () => {
+    const url = buildNewUrl();
+    chrome.tabs.update(curTabInfo.id, {url});
+  }
+
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
       <Grid container spacing={0} alignItems="center" rowSpacing={1}>
@@ -200,11 +211,22 @@ function IndexPopup() {
               checked={item.checked}
               onChange={(e) => handleChange("checked", index, e.target.checked)}
             />
-            <TextField
-              className="param-input"
-              size="small"
+            {/* <TextField
+                value={item.key}
+                className="param-input"
+                size="small"
+                onChange={(e) => handleChange("key", index, e.target.value)}></TextField> */}
+            <Autocomplete
+              freeSolo
+              options={queryOpts}
+              sx={{ width: 200 }}
               value={item.key}
-              onChange={(e) => handleChange("key", index, e.target.value)}></TextField>
+              renderInput={(params) => <TextField
+                {...params}
+                className="param-input"
+                size="small"
+                onChange={(e) => handleChange("key", index, e.target.value)}></TextField>}
+            />
             <span className="item-label">=</span>
             <TextField
               className="value-input"
@@ -237,6 +259,9 @@ function IndexPopup() {
         </Button>
         <Button variant="outlined" size="small" style={{marginLeft: '5px'}} onClick={copyUrl}>
           Copy Url
+        </Button>
+        <Button variant="outlined" size="small" style={{marginLeft: '5px'}} onClick={replaceCurUrl}>
+          Replace Current
         </Button>
       </Box>
     </Box>
