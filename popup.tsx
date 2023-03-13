@@ -13,6 +13,8 @@ import React, { useEffect, useState } from "react"
 
 import "./index.less"
 
+const STORAGE_KEY = 'QUERY_OPTS';
+
 function copy(text) {
   const ta = document.createElement('textarea');
   ta.style.cssText = 'opacity:0; position:fixed; width:1px; height:1px; top:0; left:0;';
@@ -28,7 +30,13 @@ interface IUrlInfo extends Partial<URL> {
   protocol: string
 }
 
+interface IQueryOpt {
+  key: string;
+  values: string[];
+}
+
 let curTabInfo = {} as chrome.tabs.Tab;
+let localQueryOpts = [] as IQueryOpt[];
 
 function getUrlInfo(url) {
   const urlInfo = new URL(url)
@@ -83,13 +91,23 @@ function IndexPopup() {
     protocol: "https"
   })
 
-  const [queryOpts, setQueryOpts] = useState<string[]>([]);
+  const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([]);
 
   useEffect(() => {
     const init = async () => {
       const tab = await getCurrentTab()
       const urlInfo = getUrlInfo(tab.url)
       setUrlInfo(urlInfo)
+      try {
+        chrome.storage.local.get(STORAGE_KEY, (result) => {
+          console.log('init query opts', result);
+          if(result[STORAGE_KEY]) {
+            setTempQueryOpts(JSON.parse(result[STORAGE_KEY]) || []);
+          }
+        })
+      } catch (error) {
+        
+      }
       const queryItems = [] as IQueryItem[]
       urlInfo.searchParams.forEach((value, key) => {
         queryItems.push({
@@ -106,7 +124,32 @@ function IndexPopup() {
     init().catch(console.error)
   }, [])
 
-  const handleChange = (key: string, index: number, value: string | boolean) => {
+  const saveTempQueryOpts = (key: string, value: string) => {
+    const target = tempQueryOpts.find(q => q.key === key);
+    if(target) {
+      if(!target.values.includes(value)) {
+        target.values.push(value);
+        setTempQueryOpts([...tempQueryOpts]);
+      }
+    } else {
+      tempQueryOpts.push({ key, values: [value] });
+      setTempQueryOpts([...tempQueryOpts]);
+    }
+  }
+
+  const saveQueryOpts = () => {
+    try {
+      chrome.storage.local.set({ key: STORAGE_KEY, value: JSON.stringify(tempQueryOpts) })
+    } catch (error) {
+      console.log(error); 
+    }
+  }
+
+  const handleChange = (key: string, index: number, value: string | boolean, event: React.SyntheticEvent) => {
+    const changedItem = queryItems[index];
+    if (key === "checked") {
+      saveTempQueryOpts(changedItem.key, changedItem.value);
+    } 
     setQueryItems(
       queryItems.map((item, idx) =>
         idx === index
@@ -140,19 +183,28 @@ function IndexPopup() {
   }
 
   const openUrl = () => {
+    saveQueryOpts();
     const url = buildNewUrl();
     chrome.tabs.create({url, selected: true, active: true});
   }
 
   const copyUrl = () => {
+    saveQueryOpts();
     const url = buildNewUrl();
     copy(url);
   }
 
   const replaceCurUrl = () => {
+    saveQueryOpts();
     const url = buildNewUrl();
     chrome.tabs.update(curTabInfo.id, {url});
   }
+
+  const handleQueryBlur= (key: string, value: string) => {
+    saveTempQueryOpts(key, value);
+  }
+
+  const queryKeyOpts = tempQueryOpts.map(q => q.key);
 
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
@@ -209,31 +261,34 @@ function IndexPopup() {
             <Checkbox
               size="small"
               checked={item.checked}
-              onChange={(e) => handleChange("checked", index, e.target.checked)}
+              onChange={(e) => handleChange("checked", index, e.target.checked, e)}
             />
-            {/* <TextField
-                value={item.key}
-                className="param-input"
-                size="small"
-                onChange={(e) => handleChange("key", index, e.target.value)}></TextField> */}
             <Autocomplete
               freeSolo
-              options={queryOpts}
-              sx={{ width: 200 }}
+              options={queryKeyOpts}
+              sx={{ flex: 1 }}
               value={item.key}
+              onInputChange={(e, value) => handleChange("key", index, value, e)}
               renderInput={(params) => <TextField
                 {...params}
                 className="param-input"
                 size="small"
-                onChange={(e) => handleChange("key", index, e.target.value)}></TextField>}
+                onBlur={e => handleQueryBlur('key', e.target.value)}
+                ></TextField>}
             />
             <span className="item-label">=</span>
-            <TextField
-              className="value-input"
-              size="small"
-              multiline
+            <Autocomplete
+              freeSolo
+              options={tempQueryOpts[item.key]?.values || []}
+              sx={{ flex: 1 }}
               value={item.value}
-              onChange={(e) => handleChange("value", index, e.target.value)}></TextField>
+              onInputChange={(e, value) => handleChange("value", index, value, e)}
+              renderInput={(params) => <TextField
+                {...params}
+                className="param-input"
+                size="small"
+                onBlur={e => handleQueryBlur('value', e.target.value)}></TextField>}
+            />
           </div>
         ))}
       </Box>
