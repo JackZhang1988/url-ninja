@@ -1,4 +1,5 @@
 import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded"
+import Autocomplete from "@mui/material/Autocomplete"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
 import Checkbox from "@mui/material/Checkbox"
@@ -8,22 +9,21 @@ import MenuItem from "@mui/material/MenuItem"
 import Switch from "@mui/material/Switch"
 import TextField from "@mui/material/TextField"
 import Grid from "@mui/material/Unstable_Grid2"
-import Autocomplete from "@mui/material/Autocomplete"
 import React, { useEffect, useState } from "react"
 
 import "./index.less"
 
-const STORAGE_KEY = 'QUERY_OPTS';
+const STORAGE_KEY = "QUERY_OPTS"
 
 function copy(text) {
-  const ta = document.createElement('textarea');
-  ta.style.cssText = 'opacity:0; position:fixed; width:1px; height:1px; top:0; left:0;';
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  document.execCommand('copy');
-  ta.remove();
+  const ta = document.createElement("textarea")
+  ta.style.cssText = "opacity:0; position:fixed; width:1px; height:1px; top:0; left:0;"
+  ta.value = text
+  document.body.appendChild(ta)
+  ta.focus()
+  ta.select()
+  document.execCommand("copy")
+  ta.remove()
 }
 
 interface IUrlInfo extends Partial<URL> {
@@ -31,12 +31,11 @@ interface IUrlInfo extends Partial<URL> {
 }
 
 interface IQueryOpt {
-  key: string;
-  values: string[];
+  key: string
+  values: string[]
 }
 
-let curTabInfo = {} as chrome.tabs.Tab;
-let localQueryOpts = [] as IQueryOpt[];
+let curTabInfo = {} as chrome.tabs.Tab
 
 function getUrlInfo(url) {
   const urlInfo = new URL(url)
@@ -45,6 +44,7 @@ function getUrlInfo(url) {
   return {
     hash: urlInfo.hash,
     protocol: urlInfo.protocol.slice(0, -1),
+    port: urlInfo.port,
     host: urlInfo.host,
     href: urlInfo.href,
     hostname: urlInfo.hostname,
@@ -59,7 +59,11 @@ async function getCurrentTab() {
   // `tab` will either be a `tabs.Tab` instance or `undefined`.
   let allTab = await chrome.tabs.query(queryOptions)
   // TODO: 127.0.0.1 won't return url in Edge browser
-  curTabInfo = allTab[0];
+  curTabInfo = allTab[0]
+  if (!curTabInfo) {
+    let allTab = await chrome.tabs.query({ active: true, lastFocusedWindow: false })
+    curTabInfo = allTab[0]
+  }
   return curTabInfo
 }
 
@@ -88,26 +92,27 @@ function IndexPopup() {
   const [queryItems, setQueryItems] = useState<IQueryItem[]>([{ key: "", value: "", checked: true }])
 
   const [urlInfo, setUrlInfo] = useState<IUrlInfo>({
-    protocol: "https"
+    protocol: "https",
+    hostname: "",
+    port: "",
+    pathname: "",
   })
 
-  const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([]);
+  const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([])
 
   useEffect(() => {
     const init = async () => {
-      const tab = await getCurrentTab()
+      let tab = await getCurrentTab()
       const urlInfo = getUrlInfo(tab.url)
       setUrlInfo(urlInfo)
       try {
         chrome.storage.local.get(STORAGE_KEY, (result) => {
-          console.log('init query opts', result);
-          if(result[STORAGE_KEY]) {
-            setTempQueryOpts(JSON.parse(result[STORAGE_KEY]) || []);
+          if (result[STORAGE_KEY]) {
+            console.log("init query opts", result[STORAGE_KEY])
+            setTempQueryOpts(JSON.parse(result[STORAGE_KEY]) || [])
           }
         })
-      } catch (error) {
-        
-      }
+      } catch (error) {}
       const queryItems = [] as IQueryItem[]
       urlInfo.searchParams.forEach((value, key) => {
         queryItems.push({
@@ -125,31 +130,33 @@ function IndexPopup() {
   }, [])
 
   const saveTempQueryOpts = (key: string, value: string) => {
-    const target = tempQueryOpts.find(q => q.key === key);
-    if(target) {
-      if(!target.values.includes(value)) {
-        target.values.push(value);
-        setTempQueryOpts([...tempQueryOpts]);
+    const target = tempQueryOpts.find((q) => q.key === key)
+    if (target) {
+      if (value && !target.values.includes(value)) {
+        target.values.push(value)
+        setTempQueryOpts([...tempQueryOpts])
       }
     } else {
-      tempQueryOpts.push({ key, values: [value] });
-      setTempQueryOpts([...tempQueryOpts]);
+      tempQueryOpts.push({ key, values: [value] })
+      setTempQueryOpts([...tempQueryOpts])
     }
   }
 
   const saveQueryOpts = () => {
     try {
-      chrome.storage.local.set({ key: STORAGE_KEY, value: JSON.stringify(tempQueryOpts) })
+      chrome.storage.local.set({ [STORAGE_KEY]: JSON.stringify(tempQueryOpts) }).then(() => {
+        console.log("Value is set to " + JSON.stringify(tempQueryOpts))
+      })
     } catch (error) {
-      console.log(error); 
+      console.log(error)
     }
   }
 
   const handleChange = (key: string, index: number, value: string | boolean, event: React.SyntheticEvent) => {
-    const changedItem = queryItems[index];
+    const changedItem = queryItems[index]
     if (key === "checked") {
-      saveTempQueryOpts(changedItem.key, changedItem.value);
-    } 
+      saveTempQueryOpts(changedItem.key, changedItem.value)
+    }
     setQueryItems(
       queryItems.map((item, idx) =>
         idx === index
@@ -174,37 +181,44 @@ function IndexPopup() {
   }
 
   const buildNewUrl = () => {
-    let url = `${urlInfo.protocol}://${urlInfo.hostname}${urlInfo.port ? `:${urlInfo.port}`: ''}${urlInfo.pathname}`;
-    const query = queryItems.filter(q => q.checked).reduce((pre: string, cur) => {
-      return `${pre ? pre+'&' : pre}` + `${cur.key}=${cur.value}`;
-    }, '')
+    let url = `${urlInfo.protocol}://${urlInfo.hostname}${urlInfo.port ? `:${urlInfo.port}` : ""}${urlInfo.pathname}`
+    const query = queryItems
+      .filter((q) => q.checked)
+      .reduce((pre: string, cur) => {
+        return `${pre ? pre + "&" : pre}` + `${cur.key}=${cur.value}`
+      }, "")
 
-    return url + `${query ? '?' + query : ''}` + `${urlInfo.hash ? '#' + urlInfo.hash : ''}`;
+    return url + `${query ? "?" + query : ""}` + `${urlInfo.hash ? "#" + urlInfo.hash : ""}`
   }
 
   const openUrl = () => {
-    saveQueryOpts();
-    const url = buildNewUrl();
-    chrome.tabs.create({url, selected: true, active: true});
+    saveQueryOpts()
+    const url = buildNewUrl()
+    chrome.tabs.create({ url, selected: true, active: true })
   }
 
   const copyUrl = () => {
-    saveQueryOpts();
-    const url = buildNewUrl();
-    copy(url);
+    saveQueryOpts()
+    const url = buildNewUrl()
+    copy(url)
   }
 
   const replaceCurUrl = () => {
-    saveQueryOpts();
-    const url = buildNewUrl();
-    chrome.tabs.update(curTabInfo.id, {url});
+    saveQueryOpts()
+    const url = buildNewUrl()
+    chrome.tabs.update(curTabInfo.id, { url })
   }
 
-  const handleQueryBlur= (key: string, value: string) => {
-    saveTempQueryOpts(key, value);
+  const handleQueryBlur = (type: "key" | "value", value: string, index: number) => {
+    if (type === "key") {
+      saveTempQueryOpts(value, "")
+    } else {
+      const key = queryItems[index].key
+      saveTempQueryOpts(key, value)
+    }
   }
 
-  const queryKeyOpts = tempQueryOpts.map(q => q.key);
+  const queryKeyOpts = tempQueryOpts.map((q) => q.key)
 
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
@@ -269,12 +283,13 @@ function IndexPopup() {
               sx={{ flex: 1 }}
               value={item.key}
               onInputChange={(e, value) => handleChange("key", index, value, e)}
-              renderInput={(params) => <TextField
-                {...params}
-                className="param-input"
-                size="small"
-                onBlur={e => handleQueryBlur('key', e.target.value)}
-                ></TextField>}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  className="param-input"
+                  size="small"
+                  onBlur={(e) => handleQueryBlur("key", e.target.value, index)}></TextField>
+              )}
             />
             <span className="item-label">=</span>
             <Autocomplete
@@ -283,11 +298,13 @@ function IndexPopup() {
               sx={{ flex: 1 }}
               value={item.value}
               onInputChange={(e, value) => handleChange("value", index, value, e)}
-              renderInput={(params) => <TextField
-                {...params}
-                className="param-input"
-                size="small"
-                onBlur={e => handleQueryBlur('value', e.target.value)}></TextField>}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  className="param-input"
+                  size="small"
+                  onBlur={(e) => handleQueryBlur("value", e.target.value, index)}></TextField>
+              )}
             />
           </div>
         ))}
@@ -312,10 +329,10 @@ function IndexPopup() {
         <Button variant="contained" size="small" onClick={openUrl}>
           Open
         </Button>
-        <Button variant="outlined" size="small" style={{marginLeft: '5px'}} onClick={copyUrl}>
+        <Button variant="outlined" size="small" style={{ marginLeft: "5px" }} onClick={copyUrl}>
           Copy Url
         </Button>
-        <Button variant="outlined" size="small" style={{marginLeft: '5px'}} onClick={replaceCurUrl}>
+        <Button variant="outlined" size="small" style={{ marginLeft: "5px" }} onClick={replaceCurUrl}>
           Replace Current
         </Button>
       </Box>
