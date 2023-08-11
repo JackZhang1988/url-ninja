@@ -1,4 +1,4 @@
-import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded"
+import React, { useEffect, useState } from "react"
 import Autocomplete from "@mui/material/Autocomplete"
 import Box from "@mui/material/Box"
 import Button from "@mui/material/Button"
@@ -9,9 +9,19 @@ import MenuItem from "@mui/material/MenuItem"
 import Switch from "@mui/material/Switch"
 import TextField from "@mui/material/TextField"
 import Grid from "@mui/material/Unstable_Grid2"
-import React, { useEffect, useState } from "react"
+import Tooltip from '@mui/material/Tooltip';
+import Drawer from '@mui/material/Drawer';
+import Alert from "@mui/material/Alert"
+
+import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded"
+import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
+import SelectAllRoundedIcon from '@mui/icons-material/SelectAllRounded';
+import TabUnselectedRoundedIcon from '@mui/icons-material/TabUnselectedRounded';
+import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 import "./index.less"
+import Snackbar from "@mui/material/Snackbar"
 
 const STORAGE_KEY = "QUERY_OPTS"
 
@@ -100,6 +110,10 @@ function IndexPopup() {
 
   const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([])
 
+  const [settingOpen, setSettingOpen] = useState(false);
+
+  const [clearCacheSuccess, setClearCacheSuccess] = useState(false);
+
   useEffect(() => {
     const init = async () => {
       let tab = await getCurrentTab()
@@ -130,6 +144,7 @@ function IndexPopup() {
   }, [])
 
   const saveTempQueryOpts = (key: string, value: string) => {
+    if(!key) return;
     const target = tempQueryOpts.find((q) => q.key === key)
     if (target) {
       if (value && !target.values.includes(value)) {
@@ -171,6 +186,33 @@ function IndexPopup() {
 
   const handleAddQuery = () => {
     setQueryItems([...queryItems, { key: "", value: "", checked: true }])
+  }
+
+  const handleCopyQuery = () => {
+    const query = queryItems
+      .filter((q) => q.checked)
+      .reduce((pre: string, cur) => {
+        return `${pre ? pre + "&" : pre}` + `${cur.key}=${cur.value}`
+      }, "")
+    copy(query)
+  }
+
+  const handleSelectAllQuery = () => {
+    setQueryItems(
+      queryItems.map((item) => ({
+        ...item,
+        checked: true
+      }))
+    )
+  }
+
+  const handleUnselectAllQuery = () => {
+    setQueryItems(
+      queryItems.map((item) => ({
+        ...item,
+        checked: !item.checked
+      }))
+    )
   }
 
   const handleUrlInfoChange = (type, value) => {
@@ -218,10 +260,46 @@ function IndexPopup() {
     }
   }
 
+  const triggerSetting = (open: boolean) => {
+    setSettingOpen(open);
+  }
+
   const queryKeyOpts = tempQueryOpts.map((q) => q.key)
+
+  const handleDelOptionCache = (e, key: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    console.log('del', key);
+  }
+
+  const clearAllQueryOptCache = () => {
+    chrome.storage.local.remove(STORAGE_KEY, () => {
+      console.log('clear all cache');
+      setClearCacheSuccess(true);
+    })
+  }
 
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
+      <Drawer anchor="right" open={settingOpen} onClose={() => triggerSetting(false)}>
+          <Box sx={{ padding: '10px', minWidth: '80vw'}}>
+              <Button startIcon={<DeleteIcon />} variant="contained" color="error" onClick={clearAllQueryOptCache}>Clear All Query Option Cache</Button>
+              <Snackbar
+                open={clearCacheSuccess}
+                autoHideDuration={3000}
+                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+              >
+                <Alert severity="success">
+                  All query option cache cleared!
+                </Alert>
+              </Snackbar>
+          </Box>
+      </Drawer>
+      <Tooltip title="Settings" arrow>
+        <IconButton aria-label="settings" color="primary" onClick={()=> triggerSetting(true)} className="setting-icon">
+          <SettingsRoundedIcon />
+        </IconButton>
+      </Tooltip>
       <Grid container spacing={0} alignItems="center" rowSpacing={1}>
         <UrlItem title="Protocal">
           <TextField
@@ -290,6 +368,12 @@ function IndexPopup() {
                   size="small"
                   onBlur={(e) => handleQueryBlur("key", e.target.value, index)}></TextField>
               )}
+              // renderOption={(props, option) => (
+              //   <Box component="li" {...props} sx={{ display: 'flex', justifyContent: 'space-between !important' }}>
+              //     <span>{option}</span>
+              //     <CloseIcon fontSize="small" sx={{ color: '#8e8e8e'}} onClick={(e) => handleDelOptionCache(e, option)}/>
+              //   </Box>
+              // )}
             />
             <span className="item-label">=</span>
             <Autocomplete
@@ -309,9 +393,26 @@ function IndexPopup() {
           </div>
         ))}
       </Box>
-      <IconButton aria-label="add" color="primary" onClick={handleAddQuery}>
-        <AddBoxRoundedIcon />
-      </IconButton>
+      <Tooltip title="Add new query" arrow>
+        <IconButton aria-label="add" color="primary" onClick={handleAddQuery}>
+          <AddBoxRoundedIcon />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Copy selected query" arrow>
+        <IconButton aria-label="copy" color="primary" onClick={handleCopyQuery}>
+          <ContentCopyRoundedIcon />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Select all query" arrow>
+        <IconButton aria-label="copy" color="primary" onClick={handleSelectAllQuery}>
+          <SelectAllRoundedIcon />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Unselect query" arrow>
+        <IconButton aria-label="copy" color="primary" onClick={handleUnselectAllQuery}>
+          <TabUnselectedRoundedIcon />
+        </IconButton>
+      </Tooltip>
       <Divider textAlign="left" sx={{ mt: "10px", mb: "10px" }}>
         <span className="divider-text">Hash:</span>
       </Divider>
