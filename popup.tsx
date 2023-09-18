@@ -12,6 +12,8 @@ import Grid from "@mui/material/Unstable_Grid2"
 import Tooltip from '@mui/material/Tooltip';
 import Drawer from '@mui/material/Drawer';
 import Alert from "@mui/material/Alert"
+import List from "@mui/material/List";
+import ListItem from "@mui/material/ListItem";
 
 import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded"
 import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
@@ -108,7 +110,9 @@ function IndexPopup() {
     pathname: "",
   })
 
-  const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([])
+  const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([]);
+
+  const [storageQueryOpts, setStorageQueryOpts] = useState<IQueryOpt[]>([]);
 
   const [settingOpen, setSettingOpen] = useState(false);
 
@@ -123,7 +127,9 @@ function IndexPopup() {
         chrome.storage.local.get(STORAGE_KEY, (result) => {
           if (result[STORAGE_KEY]) {
             console.log("init query opts", result[STORAGE_KEY])
-            setTempQueryOpts(JSON.parse(result[STORAGE_KEY]) || [])
+            const list = JSON.parse(result[STORAGE_KEY]) || [];
+            setTempQueryOpts(list);
+            setStorageQueryOpts(list);
           }
         })
       } catch (error) {}
@@ -160,6 +166,7 @@ function IndexPopup() {
   const saveQueryOpts = () => {
     try {
       chrome.storage.local.set({ [STORAGE_KEY]: JSON.stringify(tempQueryOpts) }).then(() => {
+        setStorageQueryOpts(tempQueryOpts);
         console.log("Value is set to " + JSON.stringify(tempQueryOpts))
       })
     } catch (error) {
@@ -269,7 +276,9 @@ function IndexPopup() {
   const handleDelOptionCache = (e, key: string) => {
     e.stopPropagation();
     e.preventDefault();
-    console.log('del', key);
+    const newOpts = tempQueryOpts.filter((q) => q.key !== key);
+    setTempQueryOpts(newOpts);
+    saveQueryOpts();
   }
 
   const clearAllQueryOptCache = () => {
@@ -293,6 +302,23 @@ function IndexPopup() {
                   All query option cache cleared!
                 </Alert>
               </Snackbar>
+              <h2>Current Storaged Query:</h2>
+              <List className="storage-list" dense>
+                <ListItem className="storage-list-item">
+                  <span className="item-key">Key</span>
+                  <span className="item-value">Values</span>
+                  <span className="item-action">Action</span>
+                </ListItem>
+                {storageQueryOpts.map((q, index) => (
+                  <ListItem key={index}  className="storage-list-item">
+                    <span className="item-key">{q.key}</span>
+                    <span className="item-value">{q.values.join(', ')}</span>
+                    <IconButton className="item-action" aria-label="delete" color="error" onClick={(e) => handleDelOptionCache(e, q.key)}>
+                      <DeleteIcon />
+                    </IconButton>
+                  </ListItem>
+                ))}
+              </List>
           </Box>
       </Drawer>
       <Tooltip title="Settings" arrow>
