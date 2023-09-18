@@ -1,23 +1,43 @@
 .item-title {
-    font-size: 16px;
+  font-size: 16px;
 }
 .divider-text {
-    font-size: 16px;
+  font-size: 16px;
 }
-.query-item, .hash-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-    .item-label {
-        padding: 0 5px;
-    }
-    .value-input {
-        flex: 1;
-    }
+.query-item,
+.hash-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  .item-label {
+    padding: 0 5px;
+  }
+  .value-input {
+    flex: 1;
+  }
 }
 
 .setting-icon {
-    position: absolute !important;
-    top: 14px;
-    right: 14px;
+  position: absolute !important;
+  top: 14px;
+  right: 14px;
+}
+
+.storage-list {
+  .storage-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    &:first-child {
+      font-weight: bold;
+    }
+    .item-key,
+    .item-value {
+      text-align: left;
+      flex: 1;
+      word-wrap: break-word;
+      overflow: hidden;
+    }
+  }
 }
