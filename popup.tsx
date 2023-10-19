@@ -1,57 +1,58 @@
-import React, { useEffect, useState } from "react"
-import Autocomplete from "@mui/material/Autocomplete"
-import Box from "@mui/material/Box"
-import Button from "@mui/material/Button"
-import Checkbox from "@mui/material/Checkbox"
-import Divider from "@mui/material/Divider"
-import IconButton from "@mui/material/IconButton"
-import MenuItem from "@mui/material/MenuItem"
-import Switch from "@mui/material/Switch"
-import TextField from "@mui/material/TextField"
-import Grid from "@mui/material/Unstable_Grid2"
-import Tooltip from '@mui/material/Tooltip';
-import Drawer from '@mui/material/Drawer';
-import Alert from "@mui/material/Alert"
+import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded";
+import ContentCopyRoundedIcon from "@mui/icons-material/ContentCopyRounded";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SelectAllRoundedIcon from "@mui/icons-material/SelectAllRounded";
+import SettingsRoundedIcon from "@mui/icons-material/SettingsRounded";
+import TabUnselectedRoundedIcon from "@mui/icons-material/TabUnselectedRounded";
+import Alert from "@mui/material/Alert";
+import Autocomplete from "@mui/material/Autocomplete";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Checkbox from "@mui/material/Checkbox";
+import Divider from "@mui/material/Divider";
+import Drawer from "@mui/material/Drawer";
+import IconButton from "@mui/material/IconButton";
 import List from "@mui/material/List";
 import ListItem from "@mui/material/ListItem";
+import MenuItem from "@mui/material/MenuItem";
+import Popover from "@mui/material/Popover";
+import Switch from "@mui/material/Switch";
+import TextField from "@mui/material/TextField";
+import Tooltip from "@mui/material/Tooltip";
+import Grid from "@mui/material/Unstable_Grid2";
+import React, { useEffect, useState } from "react";
 
-import AddBoxRoundedIcon from "@mui/icons-material/AddBoxRounded"
-import ContentCopyRoundedIcon from '@mui/icons-material/ContentCopyRounded';
-import SelectAllRoundedIcon from '@mui/icons-material/SelectAllRounded';
-import TabUnselectedRoundedIcon from '@mui/icons-material/TabUnselectedRounded';
-import SettingsRoundedIcon from '@mui/icons-material/SettingsRounded';
-import DeleteIcon from '@mui/icons-material/Delete';
+import "./index.less";
 
-import "./index.less"
-import Snackbar from "@mui/material/Snackbar"
+import Snackbar from "@mui/material/Snackbar";
 
-const STORAGE_KEY = "QUERY_OPTS"
+const STORAGE_KEY = "QUERY_OPTS";
 
 function copy(text) {
-  const ta = document.createElement("textarea")
-  ta.style.cssText = "opacity:0; position:fixed; width:1px; height:1px; top:0; left:0;"
-  ta.value = text
-  document.body.appendChild(ta)
-  ta.focus()
-  ta.select()
-  document.execCommand("copy")
-  ta.remove()
+  const ta = document.createElement("textarea");
+  ta.style.cssText = "opacity:0; position:fixed; width:1px; height:1px; top:0; left:0;";
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  document.execCommand("copy");
+  ta.remove();
 }
 
 interface IUrlInfo extends Partial<URL> {
-  protocol: string
+  protocol: string;
 }
 
 interface IQueryOpt {
-  key: string
-  values: string[]
+  key: string;
+  values: string[];
 }
 
-let curTabInfo = {} as chrome.tabs.Tab
+let curTabInfo = {} as chrome.tabs.Tab;
 
 function getUrlInfo(url) {
-  const urlInfo = new URL(url)
-  console.log("url info", urlInfo)
+  const urlInfo = new URL(url);
+  console.log("url info", urlInfo);
 
   return {
     hash: urlInfo.hash,
@@ -63,24 +64,24 @@ function getUrlInfo(url) {
     search: urlInfo.search,
     searchParams: urlInfo.searchParams,
     pathname: urlInfo.pathname
-  }
+  };
 }
 
 async function getCurrentTab() {
-  let queryOptions = { active: true, lastFocusedWindow: true }
+  let queryOptions = { active: true, lastFocusedWindow: true };
   // `tab` will either be a `tabs.Tab` instance or `undefined`.
-  let allTab = await chrome.tabs.query(queryOptions)
+  let allTab = await chrome.tabs.query(queryOptions);
   // TODO: 127.0.0.1 won't return url in Edge browser
-  curTabInfo = allTab[0]
+  curTabInfo = allTab[0];
   if (!curTabInfo) {
-    let allTab = await chrome.tabs.query({ active: true, lastFocusedWindow: false })
-    curTabInfo = allTab[0]
+    let allTab = await chrome.tabs.query({ active: true, lastFocusedWindow: false });
+    curTabInfo = allTab[0];
   }
-  return curTabInfo
+  return curTabInfo;
 }
 
 interface IUrlItemProps {
-  title: string
+  title: string;
 }
 
 function UrlItem(props: React.PropsWithChildren<IUrlItemProps>) {
@@ -91,24 +92,24 @@ function UrlItem(props: React.PropsWithChildren<IUrlItemProps>) {
       </Grid>
       <Grid xs={10}>{props.children}</Grid>
     </>
-  )
+  );
 }
 
 interface IQueryItem {
-  key: string
-  value: string
-  checked: boolean
+  key: string;
+  value: string;
+  checked: boolean;
 }
 
 function IndexPopup() {
-  const [queryItems, setQueryItems] = useState<IQueryItem[]>([{ key: "", value: "", checked: true }])
+  const [queryItems, setQueryItems] = useState<IQueryItem[]>([{ key: "", value: "", checked: true }]);
 
   const [urlInfo, setUrlInfo] = useState<IUrlInfo>({
     protocol: "https",
     hostname: "",
     port: "",
-    pathname: "",
-  })
+    pathname: ""
+  });
 
   const [tempQueryOpts, setTempQueryOpts] = useState<IQueryOpt[]>([]);
 
@@ -118,66 +119,69 @@ function IndexPopup() {
 
   const [clearCacheSuccess, setClearCacheSuccess] = useState(false);
 
+  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+
   useEffect(() => {
     const init = async () => {
-      let tab = await getCurrentTab()
-      const urlInfo = getUrlInfo(tab.url)
-      setUrlInfo(urlInfo)
+      let tab = await getCurrentTab();
+      const urlInfo = getUrlInfo(tab.url);
+      setUrlInfo(urlInfo);
       try {
         chrome.storage.local.get(STORAGE_KEY, (result) => {
           if (result[STORAGE_KEY]) {
-            console.log("init query opts", result[STORAGE_KEY])
+            console.log("init query opts", result[STORAGE_KEY]);
             const list = JSON.parse(result[STORAGE_KEY]) || [];
             setTempQueryOpts(list);
             setStorageQueryOpts(list);
           }
-        })
+        });
       } catch (error) {}
-      const queryItems = [] as IQueryItem[]
+      const queryItems = [] as IQueryItem[];
       urlInfo.searchParams.forEach((value, key) => {
         queryItems.push({
           key,
           value,
           checked: true
-        })
-      })
+        });
+      });
       if (queryItems.length) {
-        setQueryItems(queryItems)
+        setQueryItems(queryItems);
       }
-    }
+    };
 
-    init().catch(console.error)
-  }, [])
+    init().catch(console.error);
+  }, []);
 
   const saveTempQueryOpts = (key: string, value: string) => {
-    if(!key) return;
-    const target = tempQueryOpts.find((q) => q.key === key)
+    if (!key) return;
+    const target = tempQueryOpts.find((q) => q.key === key);
     if (target) {
       if (value && !target.values.includes(value)) {
-        target.values.push(value)
-        setTempQueryOpts([...tempQueryOpts])
+        target.values.push(value);
+        setTempQueryOpts([...tempQueryOpts]);
       }
     } else {
-      tempQueryOpts.push({ key, values: [value] })
-      setTempQueryOpts([...tempQueryOpts])
+      tempQueryOpts.push({ key, values: [value] });
+      setTempQueryOpts([...tempQueryOpts]);
     }
-  }
+  };
 
-  const saveQueryOpts = () => {
+  const saveQueryOpts = (newQuerysOpts?: IQueryOpt[]) => {
     try {
-      chrome.storage.local.set({ [STORAGE_KEY]: JSON.stringify(tempQueryOpts) }).then(() => {
-        setStorageQueryOpts(tempQueryOpts);
-        console.log("Value is set to " + JSON.stringify(tempQueryOpts))
-      })
+      const queryOpts = newQuerysOpts || tempQueryOpts;
+      chrome.storage.local.set({ [STORAGE_KEY]: JSON.stringify(queryOpts) }).then(() => {
+        setStorageQueryOpts(queryOpts);
+        console.log("Value is set to " + JSON.stringify(queryOpts));
+      });
     } catch (error) {
-      console.log(error)
+      console.log(error);
     }
-  }
+  };
 
   const handleChange = (key: string, index: number, value: string | boolean, event: React.SyntheticEvent) => {
-    const changedItem = queryItems[index]
+    const changedItem = queryItems[index];
     if (key === "checked") {
-      saveTempQueryOpts(changedItem.key, changedItem.value)
+      saveTempQueryOpts(changedItem.key, changedItem.value);
     }
     setQueryItems(
       queryItems.map((item, idx) =>
@@ -188,21 +192,21 @@ function IndexPopup() {
             }
           : item
       )
-    )
-  }
+    );
+  };
 
   const handleAddQuery = () => {
-    setQueryItems([...queryItems, { key: "", value: "", checked: true }])
-  }
+    setQueryItems([...queryItems, { key: "", value: "", checked: true }]);
+  };
 
   const handleCopyQuery = () => {
     const query = queryItems
       .filter((q) => q.checked)
       .reduce((pre: string, cur) => {
-        return `${pre ? pre + "&" : pre}` + `${cur.key}=${cur.value}`
-      }, "")
-    copy(query)
-  }
+        return `${pre ? pre + "&" : pre}` + `${cur.key}=${cur.value}`;
+      }, "");
+    copy(query);
+  };
 
   const handleSelectAllQuery = () => {
     setQueryItems(
@@ -210,8 +214,8 @@ function IndexPopup() {
         ...item,
         checked: true
       }))
-    )
-  }
+    );
+  };
 
   const handleUnselectAllQuery = () => {
     setQueryItems(
@@ -219,110 +223,156 @@ function IndexPopup() {
         ...item,
         checked: !item.checked
       }))
-    )
-  }
+    );
+  };
 
   const handleUrlInfoChange = (type, value) => {
     setUrlInfo({
       ...urlInfo,
       [type]: value
-    })
-  }
+    });
+  };
 
   const buildNewUrl = () => {
-    let url = `${urlInfo.protocol}://${urlInfo.hostname}${urlInfo.port ? `:${urlInfo.port}` : ""}${urlInfo.pathname}`
+    let url = `${urlInfo.protocol}://${urlInfo.hostname}${urlInfo.port ? `:${urlInfo.port}` : ""}${urlInfo.pathname}`;
     const query = queryItems
       .filter((q) => q.checked)
       .reduce((pre: string, cur) => {
-        return `${pre ? pre + "&" : pre}` + `${cur.key}=${cur.value}`
-      }, "")
+        return `${pre ? pre + "&" : pre}` + `${cur.key}=${cur.value}`;
+      }, "");
 
-    return url + `${query ? "?" + query : ""}` + `${urlInfo.hash ? "#" + urlInfo.hash : ""}`
-  }
+    return url + `${query ? "?" + query : ""}` + `${urlInfo.hash ? "#" + urlInfo.hash : ""}`;
+  };
 
   const openUrl = () => {
-    saveQueryOpts()
-    const url = buildNewUrl()
-    chrome.tabs.create({ url, selected: true, active: true })
-  }
+    saveQueryOpts();
+    const url = buildNewUrl();
+    chrome.tabs.create({ url, selected: true, active: true });
+  };
 
   const copyUrl = () => {
-    saveQueryOpts()
-    const url = buildNewUrl()
-    copy(url)
-  }
+    saveQueryOpts();
+    const url = buildNewUrl();
+    copy(url);
+  };
 
   const replaceCurUrl = () => {
-    saveQueryOpts()
-    const url = buildNewUrl()
-    chrome.tabs.update(curTabInfo.id, { url })
-  }
+    saveQueryOpts();
+    const url = buildNewUrl();
+    chrome.tabs.update(curTabInfo.id, { url });
+  };
 
   const handleQueryBlur = (type: "key" | "value", value: string, index: number) => {
     if (type === "key") {
-      saveTempQueryOpts(value, "")
+      saveTempQueryOpts(value, "");
     } else {
-      const key = queryItems[index].key
-      saveTempQueryOpts(key, value)
+      const key = queryItems[index].key;
+      saveTempQueryOpts(key, value);
     }
-  }
+  };
 
   const triggerSetting = (open: boolean) => {
     setSettingOpen(open);
-  }
+  };
 
-  const queryKeyOpts = tempQueryOpts.map((q) => q.key)
+  const queryKeyOpts = tempQueryOpts.map((q) => q.key);
 
   const handleDelOptionCache = (e, key: string) => {
     e.stopPropagation();
     e.preventDefault();
     const newOpts = tempQueryOpts.filter((q) => q.key !== key);
-    setTempQueryOpts(newOpts);
-    saveQueryOpts();
-  }
+    setTempQueryOpts(() => [...newOpts]);
+    saveQueryOpts(newOpts);
+  };
 
   const clearAllQueryOptCache = () => {
     chrome.storage.local.remove(STORAGE_KEY, () => {
-      console.log('clear all cache');
       setClearCacheSuccess(true);
-    })
-  }
+      setStorageQueryOpts([]);
+    });
+    setAnchorEl(null);
+  };
+
+  const openClearPopover = Boolean(anchorEl);
+
+  const handleClearPopoverClose = () => {
+    setAnchorEl(null);
+  };
+
+  const triggerClearPopover = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(anchorEl ? null : event.currentTarget);
+  };
 
   return (
     <Box sx={{ padding: "14px", minWidth: 600, pb: "10px" }}>
       <Drawer anchor="right" open={settingOpen} onClose={() => triggerSetting(false)}>
-          <Box sx={{ padding: '10px', minWidth: '80vw'}}>
-              <Button startIcon={<DeleteIcon />} variant="contained" color="error" onClick={clearAllQueryOptCache}>Clear All Query Option Cache</Button>
-              <Snackbar
-                open={clearCacheSuccess}
-                autoHideDuration={3000}
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-              >
-                <Alert severity="success">
-                  All query option cache cleared!
-                </Alert>
-              </Snackbar>
-              <h2>Current Storaged Query:</h2>
-              <List className="storage-list" dense>
-                <ListItem className="storage-list-item">
-                  <span className="item-key">Key</span>
-                  <span className="item-value">Values</span>
-                  <span className="item-action">Action</span>
-                </ListItem>
-                {storageQueryOpts.map((q, index) => (
-                  <ListItem key={index}  className="storage-list-item">
-                    <span className="item-key">{q.key}</span>
-                    <span className="item-value">{q.values.join(', ')}</span>
-                    <IconButton className="item-action" aria-label="delete" color="error" onClick={(e) => handleDelOptionCache(e, q.key)}>
-                      <DeleteIcon />
-                    </IconButton>
-                  </ListItem>
-                ))}
-              </List>
-          </Box>
+        <Box sx={{ padding: "10px", minWidth: "80vw" }}>
+          <Button
+            sx={{ position: "absolute", right: "10px", top: "20px" }}
+            startIcon={<DeleteIcon />}
+            variant="contained"
+            color="error"
+            size="small"
+            onClick={triggerClearPopover}>
+            Clear All
+          </Button>
+          <Popover
+            open={openClearPopover}
+            anchorEl={anchorEl}
+            onClose={handleClearPopoverClose}
+            anchorOrigin={{
+              vertical: "bottom",
+              horizontal: "center"
+            }}>
+            <Box sx={{ p: 1 }}>
+              <h3>Are you sure to clear all query options cache?</h3>
+              <Button
+                sx={{ padding: "1px 2px", fontSize: "12px", marginRight: "6px" }}
+                variant="outlined"
+                size="small"
+                onClick={handleClearPopoverClose}>
+                Cancel
+              </Button>
+              <Button
+                sx={{ padding: "1px 2px", fontSize: "12px" }}
+                variant="contained"
+                size="small"
+                onClick={clearAllQueryOptCache}>
+                OK
+              </Button>
+            </Box>
+          </Popover>
+          <Snackbar
+            open={clearCacheSuccess}
+            autoHideDuration={3000}
+            anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+            <Alert severity="success">All query options cache cleared!</Alert>
+          </Snackbar>
+          <h2>Current Storaged Query:</h2>
+          <List className="storage-list" dense>
+            <ListItem className="storage-list-item">
+              <span className="item-key">Key</span>
+              {/* <span className="item-value">Values</span> */}
+              <span className="item-action">Action</span>
+            </ListItem>
+            {storageQueryOpts.map((q, index) => (
+              <ListItem key={q.key} className="storage-list-item">
+                <span className="item-key">{q.key}</span>
+                {/* <span className="item-value">{q.values.join(', ')}</span> */}
+                <IconButton
+                  className="item-action"
+                  aria-label="delete"
+                  color="error"
+                  onClick={(e) => handleDelOptionCache(e, q.key)}>
+                  <DeleteIcon />
+                </IconButton>
+              </ListItem>
+            ))}
+          </List>
+        </Box>
       </Drawer>
       <Tooltip title="Settings" arrow>
-        <IconButton aria-label="settings" color="primary" onClick={()=> triggerSetting(true)} className="setting-icon">
+        <IconButton aria-label="settings" color="primary" onClick={() => triggerSetting(true)} className="setting-icon">
           <SettingsRoundedIcon />
         </IconButton>
       </Tooltip>
@@ -464,7 +514,7 @@ function IndexPopup() {
         </Button>
       </Box>
     </Box>
-  )
+  );
 }
 
-export default IndexPopup
+export default IndexPopup;
