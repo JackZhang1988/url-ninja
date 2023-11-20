@@ -1,0 +1,23 @@
+https://www.bing.com/images/create/an-icon-for-a-chrome-extension-called-url-ninja-th/1-65585aded1fd4839b92573dccae2cfb8?id=0cZGAYP2DxmWD4EUKeZafw%3d%3d&view=detailv2&idpp=genimg&idpclose=1&FORM=SYDBIC
+
+
+
+i'm working on a chrome extention call 'Uril-ninja" with below feature and specialty:
+Easy Edits: Modify, add, or remove parts of any webpage's URL without hassle.
+Simple Design: An easy-to-use layout for quick and accurate URL changes.
+For Everyone: Whether you're a developer fixing API calls or just customizing web addresses, URL Ninja is perfect.
+Forget complicated URL changes—URL Ninja makes it quick and precise. Improve your browsing today with URL Ninja!
+
+
+pls help me generate an icon with 128*128-pixel with below requirements:
+1. The actual icon size should be 96x96 (for square icons); an additional 16 pixels per side should be transparent padding, adding up to 128x128 total image size. 
+2. The image must be in PNG format.
+3. The image should work well on both light and dark backgrounds.
+4. the icon should not include the browser skeleton frame
+5. the background should be white
+
+
+An icon for a chrome extension called URL Ninja that modifies, adds, or removes parts of any webpage's URL. The icon should be 96x96 pixels with 16 pixels of transparent padding on each side, in PNG format, and work well on both light and dark backgrounds. The icon should convey the idea of editing URLs easily and precisely.
+
+
+An icon with Ninja and tools which convey the idea of editing URLs easily and precisely. The icon should be 96x96 pixels with 16 pixels of transparent padding on each side, in PNG format, and work well on both light and dark backgrounds. The background should be transparent. The icon should be simple.
