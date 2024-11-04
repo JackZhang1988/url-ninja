@@ -1,7 +1,7 @@
 {
   "name": "url-ninja",
   "displayName": "Url Ninja",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Simplify URL tweaks instantly. Edit, add, or remove parameters effortlessly for smoother browsing",
   "author": "jianbozhang",
   "scripts": {
