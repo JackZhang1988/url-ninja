@@ -276,6 +276,10 @@ function IndexPopup() {
   };
 
   const queryKeyOpts = tempQueryOpts.map((q) => q.key);
+  const getQueryValueOpts = (key: string) => {
+    const target = tempQueryOpts.find((q) => q.key === key);
+    return target?.values || [];
+  };
 
   const handleDelOptionCache = (e, key: string) => {
     e.stopPropagation();
@@ -434,7 +438,14 @@ function IndexPopup() {
             <Autocomplete
               freeSolo
               options={queryKeyOpts}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, minWidth: '300px' }}
+              componentsProps={{
+                paper: {
+                  sx: {
+                    wordBreak: "break-word"
+                    }
+                  }
+              }}
               value={item.key}
               onInputChange={(e, value) => handleChange("key", index, value, e)}
               renderInput={(params) => (
@@ -454,8 +465,15 @@ function IndexPopup() {
             <span className="item-label">=</span>
             <Autocomplete
               freeSolo
-              options={tempQueryOpts[item.key]?.values || []}
-              sx={{ flex: 1 }}
+              options={getQueryValueOpts(item.key)}
+              sx={{ width: '300px' }}
+              componentsProps={{
+                paper: {
+                  sx: {
+                    wordBreak: "break-word"
+                    }
+                  }
+              }}
               value={item.value}
               onInputChange={(e, value) => handleChange("value", index, value, e)}
               renderInput={(params) => (
